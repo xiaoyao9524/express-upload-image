@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>上传图片DEMO</title>
+  <script src="/js/jquery.js"></script>
+  <script src="/js/axios.min.js"></script>
+  <script src="/js/compress.js"></script>
+  <style>
+    .demo1 .img1 {
+      width: 600px;
+    }
+  </style>
+</head>
+
+<body>
+  <section class="demo1">
+    <h3>普通上传</h3>
+    <input type="file" class="fileInput">
+    <img class="img1" src="">
+  </section>
+  <script>
+    {
+      let fileInput = $('.demo1 .fileInput')
+      let img = $('.demo1 .img1')[0]
+      fileInput.on('change', function (ev) {
+        let file = ev.target.files[0];
+        // 预览部分
+        let reader = new FileReader();
+        reader.onload = function () {
+          // this.result为转为base64的图片
+          img.src = this.result;
+        };
+        reader.readAsDataURL(file);
+        // 上传部分
+        let formData = new FormData();
+        formData.append('file', file);
+        formData.append("typeId", 2);
+
+        axios.post("/test", formData)
+          .then((res) => {
+            console.log(res.data);
+          })
+
+        // $.ajax({
+        //   type: 'POST',
+        //   url: '/test',
+        //   // 不对data做默认处理
+        //   processData: false,
+        //   // 设置content-type
+        //   contentType: false,
+        //   data: formData,
+        //   success(res) {
+        //     console.log(res);
+        //   }
+        // })
+      })
+    }
+  </script>
+
+  <hr>
+
+  <section class="demo2">
+    <h3>图片压缩上传</h3>
+    <input type="file" class="file-input">
+    <div>
+      <h4>未压缩：</h4>
+      <img src="" alt="" class="old-img">
+    </div>
+    <div class="storeHiddenImg">
+      <!-- 存储隐藏的图片 -->
+    </div>
+    <div class="canvas-wrapper">
+      <h4>canvas: </h4>
+    </div>
+    <div>
+      <h4>压缩后：</h4>
+      <img class="new-img">
+    </div>
+  </section>
+  <style>
+    .demo2 img {
+      width: 500px;
+    }
+
+    .storeHiddenImg {
+      display: none;
+    }
+  </style>
+  <script>
+    {
+      let fileInput = $('.demo2 .file-input');
+
+      function compress(file, quality, callBack) {
+        // let file = ev.target.files[0];
+        if (!file) {
+          return
+        };
+        // 1
+        let reader = new FileReader();
+        reader.onload = createImg;
+        reader.readAsDataURL(file);
+
+        function createImg() {
+          // console.log('createImg')
+          // 创建一个图片用来获取一会创建canvas的宽高等信息
+          let image = new Image();
+          image.onload = createCanvas;
+          image.src = this.result;
+        }
+
+        function createCanvas() {
+          // console.log('createCanvas')
+          // 根据刚才的图片创建canvas
+          let canvas = document.createElement('canvas');
+          // 设置宽高
+          canvas.width = this.naturalWidth;
+          canvas.height = this.naturalHeight;
+          let ctx = canvas.getContext('2d');
+          // 绘制图片
+          ctx.drawImage(this, 0, 0);
+          // 压缩后的base64
+          let dataUrl = canvas.toDataURL('image/jpeg', quality);
+          let result = dataUrlToBlob(dataUrl);
+          callBack(null, result);
+          // console.log('最终结果：', result);
+        }
+
+        function dataUrlToBlob(dataUrl) {
+          let dataUrlArr = dataUrl.split(',');
+          // 类型
+          let type = dataUrlArr[0].match(/data:(.*);/)[1];
+          // base64串
+          let base64 = dataUrlArr[1];
+          // 解码base64
+          let byteString = atob(base64);
+          // console.log(byteBase64[0]);
+          let ia = new Uint8Array(byteString.length);
+          for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+          }
+          // console.log(ia);
+
+          return new Blob([ia], {
+            type
+          });
+        }
+      }
+
+      fileInput.on('change', function (ev) {
+        let file = ev.target.files[0];
+        compress2(file, 0.3, (err, data) => {
+          console.log('data: ', data);
+          let reader = new FileReader();
+          reader.onload = function () {
+            // console.log(this.result);
+            $('.demo2 .new-img')[0].src = this.result;
+          }
+          reader.readAsDataURL(data);
+
+          let formData = new FormData();
+          formData.append("file", data);
+          formData.append("typeId", 2);
+          console.log('formData: ', formData);
+          // http://47.104.152.24:8087/api/base/upload
+          axios.post("/blob", formData)
+            .then((res) => {
+              console.log(res.data);
+            })
+        });
+
+        // $.ajax({
+        //   type: 'POST',
+        //   url: '/blob',
+        //   // 不对data做默认处理
+        //   processData: false,
+        //   // 设置content-type
+        //   contentType: false,
+        //   data: blob,
+        //   success(res) {
+        //     console.log(res);
+        //   }
+        // })
+
+      });
+    }
+  </script>
+</body>
+
+</html>

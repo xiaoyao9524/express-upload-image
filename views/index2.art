@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>图片上传压缩</title>
+  <script src="/js/jquery.js"></script>
+</head>
+
+<body>
+  <input type="file" id="test">
+  <img src="" alt="" id="textImg">
+  <p id="text" style="width: 600px;word-break:break-all;"></p>
+  <script>
+    $('#test').on('change', function () {
+      compress(this.files[0], 0.3, (err, data) => {
+        
+      })
+    })
+
+    function compress(file, quality, callback) { // 文件、压缩质量、回调
+      // console.log('文件：', file, '质量：', quality);
+      // 首先判断是否支持两个关键的方法
+      if (!window.FileReader || !window.Blob) {
+        return errorHandler('您的浏览器不支持图片压缩')();
+      }
+      // 开始读取图片
+      var reader = new FileReader();
+      var mimeType = file.type || 'image/jpeg';
+
+      // 读取完成后去创建图片
+      reader.onload = createImage;
+      reader.onerror = errorHandler('图片读取失败！');
+      reader.readAsDataURL(file);
+
+      function createImage() { // 创建图片
+        // base64
+        var dataURL = this.result;
+        var image = new Image();
+        // 创建图片完成之后去压缩图片
+        image.onload = compressImage;
+        image.onerror = errorHandler('图片加载失败');
+        image.src = dataURL;
+      }
+
+      function compressImage() {
+        // 创建canvas标签
+        var canvas = document.createElement('canvas');
+        canvas.width = this.naturalWidth;
+        canvas.height = this.naturalHeight;
+        let ctx = canvas.getContext('2d');
+        // 将图片画到画布上
+        ctx.drawImage(this, 0, 0);
+        // 再转为base64
+        let dataURI = canvas.toDataURL(mimeType, quality);
+        // console.log('dataURI', dataURI)
+        document.getElementById('text').innerHTML = dataURI;
+        // document.getElementById('textImg').src = dataURI;
+        result = dataURIToBlob(dataURI);
+        // callback(null, result);
+      }
+    }
+
+    function dataURIToBlob(dataURI) {
+      var type = dataURI.match(/data:([^;]+)/)[1];
+      console.log('type: ', type);
+      var base64 = dataURI.replace(/^[^,]+,/, '');
+      console.log('base64: ', base64);
+      var byteString = atob(base64);
+      console.log('byteString', byteString.length)
+      var ia = new Uint8Array(byteString.length);
+      for (var i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      console.log('ia', ia)
+      let blob = new Blob([ia], {
+        type: type
+      });
+      console.log('blob: ', blob)
+      return blob;
+    }
+
+    function errorHandler(message) {
+      return function () {
+        var error = new Error('Compression Error:', message);
+        callback(error, null);
+      };
+    }
+  </script>
+</body>
+
+</html>
